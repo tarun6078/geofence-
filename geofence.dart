@@ -41,6 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String location = '';
   String address = '';
   TextEditingController radiusController = TextEditingController();
+  TextEditingController timerController = TextEditingController();
   bool isAttendanceStopped = false;
   bool isEntryRecorded = false;
   bool isExitRecorded = false;
@@ -101,82 +102,89 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              "Geofence Event: " + geofenceEvent,
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter your name',
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                "Geofence Event: " + geofenceEvent,
               ),
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: radiusController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter radius (meters)',
+              SizedBox(height: 10),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Enter your name',
+                ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 10),
-            Text('Current Location: $location'),
-            SizedBox(height: 10),
-            Text('Current Address: $address'),
-            SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  child: Text("Start"),
-                  onPressed: () async {
-                    print("start");
-                    await startAttendance();
-                  },
+              SizedBox(height: 10),
+              TextField(
+                controller: radiusController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Enter radius (meters)',
                 ),
-                SizedBox(
-                  width: 10.0,
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 10),
+              TextField(
+                controller: timerController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Enter timer duration (seconds)',
                 ),
-                ElevatedButton(
-                  child: Text("Stop"),
-                  onPressed: () async {
-                    print("stop");
-                    await stopAttendance();
-                  },
-                ),
-              ],
-            ),
-            SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    await _getCurrentLocation();
-                  },
-                  child: Text('Get Location'),
-                ),
-                ElevatedButton(
-                  child: Text("Attendance Records"),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AttendanceRecordPage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () async {
+                  await _getCurrentLocation();
+                },
+                child: Text('Get Location'),
+              ),
+              SizedBox(height: 10),
+              Text('Current Location: $location'),
+              SizedBox(height: 10),
+              Text('Current Address: $address'),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    child: Text("Start"),
+                    onPressed: () async {
+                      print("start");
+                      await startAttendance();
+                    },
+                  ),
+                  SizedBox(
+                    width: 10.0,
+                  ),
+                  ElevatedButton(
+                    child: Text("Stop"),
+                    onPressed: () async {
+                      print("stop");
+                      await stopAttendance();
+                    },
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              ElevatedButton(
+                child: Text("Attendance Records"),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AttendanceRecordPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -190,37 +198,39 @@ class _MyHomePageState extends State<MyHomePage> {
       eventPeriodInSeconds: 10,
     );
     if (geofenceEventStream == null) {
-      geofenceEventStream = Geofence.getGeofenceStream()
-          ?.listen((GeofenceEvent event) async {
-        print(event.toString());
-        if (!isAttendanceStopped) {
-          if (event == GeofenceEvent.enter) {
-            if (!isEntryRecorded) {
-              await saveAttendance(
-                  nameController.text, GeofenceEvent.init, address);
-              await saveAttendance(
-                  nameController.text, GeofenceEvent.enter, address);
-              setState(() {
-                isEntryRecorded = true;
-              });
-              _showEventDialog(GeofenceEvent.init.toString());
-              _showEventDialog(event.toString());
-              Timer(Duration(seconds: 5), () async {
-                await markExit();
-              });
-            }
-          } else if (event == GeofenceEvent.exit && isEntryRecorded) {
-            if (!isExitRecorded) {
-              await saveAttendance(nameController.text, event, address);
-              setState(() {
-                isExitRecorded = true;
-              });
-              _showEventDialog(event.toString());
-              await stopAttendance();
+      geofenceEventStream = Geofence.getGeofenceStream()?.listen(
+            (GeofenceEvent event) async {
+          print(event.toString());
+          if (!isAttendanceStopped) {
+            if (event == GeofenceEvent.enter) {
+              if (!isEntryRecorded) {
+                await saveAttendance(
+                    nameController.text, GeofenceEvent.init, address);
+                await saveAttendance(
+                    nameController.text, GeofenceEvent.enter, address);
+                setState(() {
+                  isEntryRecorded = true;
+                });
+                _showEventDialog(GeofenceEvent.init.toString());
+                _showEventDialog(event.toString());
+                int timerDuration = int.parse(timerController.text);
+                Timer(Duration(seconds: timerDuration), () async {
+                  await markExit();
+                });
+              }
+            } else if (event == GeofenceEvent.exit && isEntryRecorded) {
+              if (!isExitRecorded) {
+                await saveAttendance(nameController.text, event, address);
+                setState(() {
+                  isExitRecorded = true;
+                });
+                _showEventDialog(event.toString());
+                await stopAttendance();
+              }
             }
           }
-        }
-      });
+        },
+      );
     }
   }
 
@@ -238,8 +248,8 @@ class _MyHomePageState extends State<MyHomePage> {
     List<String>? attendanceList = prefs.getStringList('attendance') ?? [];
     String formattedDateTime = DateTime.now().toString();
     String eventText = _getEventText(event);
-    attendanceList
-        .add('$name: $formattedDateTime - $eventText - Address: $address');
+    attendanceList.add(
+        '$name: $formattedDateTime - $eventText - Address: $address');
     await prefs.setStringList('attendance', attendanceList);
   }
 
